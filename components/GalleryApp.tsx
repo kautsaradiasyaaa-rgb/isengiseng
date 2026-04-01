@@ -13,6 +13,18 @@ type Collage = {
 
 const COLLAGE_SIZE = 900;
 
+async function safeJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!res.ok) {
+    const message = data?.error ?? `Request failed: ${res.status}`;
+    throw new Error(message);
+  }
+
+  return data as T;
+}
+
 export default function GalleryApp() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [collages, setCollages] = useState<Collage[]>([]);
@@ -20,23 +32,32 @@ export default function GalleryApp() {
   const [isUploading, setIsUploading] = useState(false);
   const [isSavingCollage, setIsSavingCollage] = useState(false);
   const [title, setTitle] = useState('My collage');
+  const [error, setError] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   async function loadPhotos() {
     const res = await fetch('/api/photos');
-    const data = await res.json();
-    setPhotos(data.map((p: any) => ({ ...p, _id: p._id.toString() })));
+    const data = await safeJson<any[]>(res);
+    setPhotos(data.map((p) => ({ ...p, _id: p._id.toString() })));
   }
 
   async function loadCollages() {
     const res = await fetch('/api/collages');
-    const data = await res.json();
-    setCollages(data.map((c: any) => ({ ...c, _id: c._id.toString() })));
+    const data = await safeJson<any[]>(res);
+    setCollages(data.map((c) => ({ ...c, _id: c._id.toString() })));
+  }
+
+  async function loadAll() {
+    try {
+      setError('');
+      await Promise.all([loadPhotos(), loadCollages()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed loading gallery data');
+    }
   }
 
   useEffect(() => {
-    loadPhotos();
-    loadCollages();
+    loadAll();
   }, []);
 
   const selectedPhotos = useMemo(
@@ -51,11 +72,18 @@ export default function GalleryApp() {
     const body = new FormData();
     body.append('file', file);
 
-    setIsUploading(true);
-    await fetch('/api/photos', { method: 'POST', body });
-    setIsUploading(false);
-    e.target.value = '';
-    await loadPhotos();
+    try {
+      setError('');
+      setIsUploading(true);
+      const res = await fetch('/api/photos', { method: 'POST', body });
+      await safeJson(res);
+      e.target.value = '';
+      await loadPhotos();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   function toggle(id: string) {
@@ -113,31 +141,38 @@ export default function GalleryApp() {
   async function saveCollage() {
     if (!selectedPhotos.length) return;
 
-    setIsSavingCollage(true);
-    const imageDataUrl = await drawCanvas();
+    try {
+      setError('');
+      setIsSavingCollage(true);
+      const imageDataUrl = await drawCanvas();
 
-    if (!imageDataUrl) {
+      if (!imageDataUrl) {
+        throw new Error('Collage render failed');
+      }
+
+      const res = await fetch('/api/collages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          sourcePhotoIds: selectedPhotos.map((p) => p._id),
+          imageDataUrl,
+        }),
+      });
+
+      await safeJson(res);
+      await loadCollages();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save collage');
+    } finally {
       setIsSavingCollage(false);
-      return;
     }
-
-    await fetch('/api/collages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        sourcePhotoIds: selectedPhotos.map((p) => p._id),
-        imageDataUrl,
-      }),
-    });
-
-    setIsSavingCollage(false);
-    await loadCollages();
   }
 
   return (
     <main>
       <h1>True Photo Gallery + Collage Editor</h1>
+      {error ? <p className="errorBanner">{error}</p> : null}
 
       <section className="card">
         <h2>1) Upload & Save Photos</h2>
