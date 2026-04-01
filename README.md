@@ -1,10 +1,11 @@
 # Photo Collage Gallery (Next.js + MongoDB)
 
 A Next.js web app with:
-- Photo upload endpoint (`/api/photos`)
-- Gallery display
-- Collage preview (select up to 4 photos)
-- MongoDB Atlas/Cluster integration
+- Photo upload endpoint (`/api/photos`) that stores files and metadata
+- Real gallery view of uploaded photos
+- Collage editor (select up to 4 photos)
+- Collage export/save endpoint (`/api/collages`)
+- MongoDB Atlas/Cluster integration for both photos and collages
 
 ## Setup
 
@@ -25,7 +26,8 @@ npm run dev
 
 4. Open `http://localhost:3000`.
 
-## Notes
+## How it works
 
-- Uploaded files are stored in `public/uploads`.
-- Metadata is stored in MongoDB collection `photos`.
+- Uploaded photos are saved in `public/uploads` and inserted into MongoDB collection `photos`.
+- Collage editing happens in the browser (canvas).
+- Saved collage image is exported to PNG, uploaded via API, stored in `public/uploads`, and metadata goes to `collages` collection.

@@ -36,6 +36,7 @@ button {
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 input[type='file'] { margin-bottom: 0.75rem; }
 .collage {
+  margin-top: 0.75rem;
   display: grid;
   grid-template-columns: repeat(2, minmax(120px, 1fr));
   gap: 0.5rem;
@@ -44,4 +45,19 @@ input[type='file'] { margin-bottom: 0.75rem; }
   outline: 4px solid #2563eb;
   border-radius: 10px;
 }
-.helper { color: #52525b; font-size: 0.9rem; }
+.helper { color: #52525b; font-size: 0.9rem; margin: 0.4rem 0; }
+.imageButton {
+  background: transparent;
+  padding: 0;
+  border-radius: 10px;
+}
+.textInput {
+  margin: 0.5rem 0;
+  width: 100%;
+  max-width: 360px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+}
+.toolbar { margin-top: 0.75rem; }
+.hiddenCanvas { display: none; }
